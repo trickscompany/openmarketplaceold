@@ -1,11 +1,10 @@
-name: Manual trigger
-
+name: Manual trigger 2
 on:
   workflow_dispatch:
     inputs:
       name:
         description: "Who to greet"
-        default: "World"
+        default: "DR"
 jobs:
     hello:
         runs-on: ubuntu-latest

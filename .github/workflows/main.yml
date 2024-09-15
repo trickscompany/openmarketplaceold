@@ -23,10 +23,7 @@ jobs:
         run: |
           # Définir les répertoires à surveiller et leurs étiquettes correspondantes
           declare -A dir_labels=(
-            ["frontend"]="frontend"
-            ["backend"]="backend"
-            ["docs"]="documentation"
-            ["tests"]="testing"
+            ["tests"]="tests"
           )
 
           # Définir les répertoires qui nécessitent une revue manuelle

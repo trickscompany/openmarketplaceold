@@ -1,0 +1,64 @@
+name: Label and Manage PR Approvals
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  label-and-manage-pr:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+
+      - name: Get changed files
+        id: changed-files
+        uses: tj-actions/changed-files@v35
+
+      - name: Label and manage PR
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Définir les répertoires à surveiller et leurs étiquettes correspondantes
+          declare -A dir_labels=(
+            ["frontend"]="frontend"
+            ["backend"]="backend"
+            ["docs"]="documentation"
+            ["tests"]="testing"
+          )
+
+          # Définir les répertoires qui nécessitent une revue manuelle
+          manual_review_dirs=("backend" "config")
+
+          needs_manual_review=false
+          labels_to_add=()
+
+          # Vérifier chaque fichier modifié
+          for file in ${{ steps.changed-files.outputs.all_changed_files }}; do
+            for dir in "${!dir_labels[@]}"; do
+              if [[ $file == $dir/* ]]; then
+                labels_to_add+=("${dir_labels[$dir]}")
+                if [[ " ${manual_review_dirs[@]} " =~ " ${dir} " ]]; then
+                  needs_manual_review=true
+                fi
+                break
+              fi
+            done
+          done
+
+          # Supprimer les doublons et ajouter les étiquettes
+          unique_labels=($(echo "${labels_to_add[@]}" | tr ' ' '\n' | sort -u | tr '\n' ' '))
+          if [ ${#unique_labels[@]} -ne 0 ]; then
+            gh pr edit ${{ github.event.number }} --add-label "${unique_labels[@]}"
+          fi
+
+          # Gérer l'approbation
+          if [ "$needs_manual_review" = true ]; then
+            gh pr edit ${{ github.event.number }} --add-label "needs-review"
+            gh pr comment ${{ github.event.number }} --body "Cette PR modifie des répertoires sensibles et nécessite une revue manuelle."
+          else
+            gh pr edit ${{ github.event.number }} --add-label "auto-approved"
+            gh pr comment ${{ github.event.number }} --body "Cette PR peut être fusionnée automatiquement car elle ne modifie pas de répertoires sensibles."
+          fi
